@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Memento Mori - Life in Days</title>
+  <style>
+    body {
+      background: #111;
+      color: #eee;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    input, button {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 6px;
+      border: none;
+    }
+    button {
+      cursor: pointer;
+      background: #444;
+      color: white;
+    }
+    #summary {
+      margin-top: 15px;
+      font-size: 1.1em;
+    }
+    #progressContainer {
+      width: 100%;
+      background: #333;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 10px 0;
+      height: 20px;
+      position: relative;
+    }
+    #progressBar {
+      height: 100%;
+      background: #4caf50;
+      width: 0;
+      transition: width 0.5s ease;
+    }
+    #progressText {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.9em;
+      color: #fff;
+      line-height: 20px;
+    }
+    #grid {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(12px, 1fr));
+      gap: 2px;
+      max-height: 65vh;
+      overflow-y: auto;
+    }
+    .day {
+      width: 12px;
+      height: 12px;
+      accent-color: #4caf50;
+    }
+    .today {
+      outline: 2px solid red;
+    }
+  </style>
+</head>
+<body>
+  <h1>Memento Mori</h1>
+  <p>Enter your birthdate and life expectancy to see your life in days.</p>
+
+  <input type="date" id="birthdate">
+  <input type="number" id="lifeExpectancy" placeholder="Life Expectancy (years)">
+  <button onclick="generateGrid()">Generate</button>
+
+  <div id="summary"></div>
+  <div id="progressContainer">
+    <div id="progressBar"></div>
+    <div id="progressText">0%</div>
+  </div>
+  <div id="grid"></div>
+
+  <script>
+    function updateSummary(totalDays, daysLived, saved) {
+      const checkedDays = Object.values(saved).filter(v => v).length;
+      const daysLeft = totalDays - checkedDays;
+      document.getElementById("summary").innerText = `Days lived (checked): ${checkedDays} | Days left: ${daysLeft} | Total: ${totalDays}`;
+
+      const progressPercent = Math.min((checkedDays / totalDays) * 100, 100);
+      document.getElementById("progressBar").style.width = progressPercent + "%";
+      document.getElementById("progressText").innerText = progressPercent.toFixed(1) + "%";
+    }
+
+    function generateGrid() {
+      const birthdate = new Date(document.getElementById("birthdate").value);
+      const expectancy = parseInt(document.getElementById("lifeExpectancy").value);
+      if (!birthdate || !expectancy) return;
+
+      const totalDays = expectancy * 365;
+      const grid = document.getElementById("grid");
+      grid.innerHTML = "";
+
+      const today = new Date();
+      const daysLived = Math.floor((today - birthdate) / (1000*60*60*24));
+
+      // Load saved state from localStorage
+      const saved = JSON.parse(localStorage.getItem("lifeTracker") || "{}");
+
+      for (let i = 0; i < totalDays; i++) {
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "day";
+
+        // Auto check past days
+        if (i < daysLived) checkbox.checked = true;
+
+        // Restore saved state
+        if (saved[i] === true) checkbox.checked = true;
+
+        // Highlight today
+        if (i === daysLived) checkbox.classList.add("today");
+
+        // Save state when toggled
+        checkbox.addEventListener("change", () => {
+          saved[i] = checkbox.checked;
+          localStorage.setItem("lifeTracker", JSON.stringify(saved));
+          updateSummary(totalDays, daysLived, saved);
+        });
+
+        grid.appendChild(checkbox);
+      }
+
+      // Initial summary update
+      updateSummary(totalDays, daysLived, saved);
+
+      // Save birthdate + expectancy for persistence
+      localStorage.setItem("birthdate", document.getElementById("birthdate").value);
+      localStorage.setItem("expectancy", expectancy);
+    }
+
+    // Auto restore last session
+    window.onload = function() {
+      const savedBirth = localStorage.getItem("birthdate");
+      const savedExp = localStorage.getItem("expectancy");
+      if (savedBirth && savedExp) {
+        document.getElementById("birthdate").value = savedBirth;
+        document.getElementById("lifeExpectancy").value = savedExp;
+        generateGrid();
+      }
+    }
+  </script>
+</body>
+</html>
